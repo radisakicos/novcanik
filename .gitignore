@@ -11,7 +11,7 @@ dist-ssr
 *.tsbuildinfo
 
 CLAUDE.md
-smart_finance_tracker/
+docs/design-reference/
 *.bat
 ideas.md
 public/privacy-policy.md
