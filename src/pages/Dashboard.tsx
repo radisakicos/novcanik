@@ -25,7 +25,7 @@ function formatDate(dateStr: string): string {
 
 export function Dashboard() {
   const now = new Date()
-  const { currency } = useAuth()
+  const { currency, carryOverEnabled } = useAuth()
   const [currentDate, setCurrentDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const [showModal, setShowModal] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
@@ -34,8 +34,10 @@ export function Dashboard() {
   const month = currentDate.getMonth() + 1
   const isCurrentMonth = year === now.getFullYear() && currentDate.getMonth() === now.getMonth()
 
-  const { totalIncome, totalExpense, balance, recentTransactions, loading, error } =
+  const { totalIncome, totalExpense, openingBalance, balance, recentTransactions, loading, error } =
     useDashboard(year, month, refreshKey)
+
+  const monthDelta = totalIncome - totalExpense
 
   const prevMonth = (): void => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
   const nextMonth = (): void => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))
@@ -76,7 +78,7 @@ export function Dashboard() {
             </button>
           </div>
 
-          <div className="flex items-baseline justify-center gap-3 mb-8">
+          <div className="flex items-baseline justify-center gap-3 mb-3">
             <h1 className="font-display text-white text-6xl md:text-7xl font-bold" style={{ letterSpacing: '-0.02em' }}>
               {loading ? '—' : Math.round(balance).toLocaleString('de-DE')}
             </h1>
@@ -84,6 +86,18 @@ export function Dashboard() {
               {currency}
             </span>
           </div>
+
+          {!loading && carryOverEnabled && (
+            <p className="text-xs text-slate-500 mb-8">
+              Preneseno: <span className={openingBalance >= 0 ? 'text-green-400' : 'text-red-400'}>
+                {openingBalance >= 0 ? '+' : ''}{formatAmount(openingBalance, currency)}
+              </span>
+              {' · '}Ovaj mesec: <span className={monthDelta >= 0 ? 'text-green-400' : 'text-red-400'}>
+                {monthDelta >= 0 ? '+' : ''}{formatAmount(monthDelta, currency)}
+              </span>
+            </p>
+          )}
+          {(loading || !carryOverEnabled) && <div className="mb-8" />}
 
           <button onClick={() => setShowModal(true)}
             className="bg-orange-500 hover:bg-orange-600 text-[#2d1600] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95 flex items-center gap-2">

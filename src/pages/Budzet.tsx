@@ -1,17 +1,18 @@
 import { useState, useEffect, type ChangeEvent } from 'react'
 import { Pencil, Check, X, TrendingUp, Receipt } from 'lucide-react'
 
-import { useBudzet, type BudgetSettings } from '../hooks/useBudzet'
+import { useBudzet, type BudgetSettings, type ReservedByCategory } from '../hooks/useBudzet'
 import { FixedCostsModal } from '../components/budget/FixedCostsModal'
 import { useAuth } from '../context/AuthContext'
 import { formatAmount } from '../lib/formatAmount'
 
 type SliderKey = 'spending_pct' | 'investing_pct' | 'giving_pct'
+type CostKey = keyof ReservedByCategory
 
-const SLIDER_CATEGORIES: { key: SliderKey; label: string; sub: string; recommended: number }[] = [
-  { key: 'spending_pct',  label: 'Trošenje',    sub: 'Hrana, zabava, hobiji, putovanja',        recommended: 20 },
-  { key: 'investing_pct', label: 'Investiranje', sub: 'Bitcoin, akcije, nekretnine',             recommended: 20 },
-  { key: 'giving_pct',    label: 'Davanje',     sub: 'Donacije, pomoć porodici',                 recommended: 10 },
+const SLIDER_CATEGORIES: { key: SliderKey; costKey: CostKey; label: string; sub: string; recommended: number }[] = [
+  { key: 'spending_pct',  costKey: 'spending',  label: 'Trošenje',    sub: 'Hrana, zabava, hobiji, putovanja',        recommended: 20 },
+  { key: 'investing_pct', costKey: 'investing', label: 'Investiranje', sub: 'Bitcoin, akcije, nekretnine',             recommended: 20 },
+  { key: 'giving_pct',    costKey: 'giving',    label: 'Davanje',     sub: 'Donacije, pomoć porodici',                 recommended: 10 },
 ]
 
 interface CardProps {
@@ -20,13 +21,16 @@ interface CardProps {
   pct: number
   recommended: number
   remainingBudget: number
+  reserved: number
   currency: string
   onChange: (v: number) => void
   onSave: () => void
 }
 
-function BudgetCard({ label, sub, pct, recommended, remainingBudget, currency, onChange, onSave }: CardProps) {
+function BudgetCard({ label, sub, pct, recommended, remainingBudget, reserved, currency, onChange, onSave }: CardProps) {
   const amount = Math.round((pct / 100) * remainingBudget)
+  const free = amount - reserved
+  const isOverReserved = reserved > amount
 
   return (
     <div className="bg-[#111418] rounded-xl p-6 border border-white/5 relative overflow-hidden">
@@ -68,19 +72,37 @@ function BudgetCard({ label, sub, pct, recommended, remainingBudget, currency, o
           <span>100%</span>
         </div>
       </div>
+      {reserved > 0 && (
+        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+            Već rezervisano (fiksni troškovi)
+          </span>
+          <span className={`text-xs font-bold ${isOverReserved ? 'text-red-400' : 'text-slate-300'}`}>
+            −{formatAmount(reserved, currency)}
+          </span>
+        </div>
+      )}
+      {reserved > 0 && (
+        <div className="flex items-center justify-between mt-1">
+          <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Slobodno</span>
+          <span className={`text-xs font-bold ${isOverReserved ? 'text-red-400' : 'text-emerald-400'}`}>
+            {formatAmount(free, currency)}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
 
 interface BillsCardProps {
-  totalFixedCosts: number
+  billsCosts: number
   monthlyIncome: number
   currency: string
   onEdit: () => void
 }
 
-function BillsCard({ totalFixedCosts, monthlyIncome, currency, onEdit }: BillsCardProps) {
-  const pct = monthlyIncome > 0 ? Math.round((totalFixedCosts / monthlyIncome) * 100) : 0
+function BillsCard({ billsCosts, monthlyIncome, currency, onEdit }: BillsCardProps) {
+  const pct = monthlyIncome > 0 ? Math.round((billsCosts / monthlyIncome) * 100) : 0
   const isOver = pct > 50
 
   return (
@@ -95,7 +117,7 @@ function BillsCard({ totalFixedCosts, monthlyIncome, currency, onEdit }: BillsCa
           <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">FIKSNI TROŠKOVI</p>
           <p className="text-2xl font-bold text-white">
             {pct}%{' '}
-            <span className="text-xs text-slate-400 font-medium ml-1">({formatAmount(Math.round(totalFixedCosts), currency)})</span>
+            <span className="text-xs text-slate-400 font-medium ml-1">({formatAmount(Math.round(billsCosts), currency)})</span>
           </p>
         </div>
         <div className="text-right">
@@ -131,9 +153,10 @@ function BillsCard({ totalFixedCosts, monthlyIncome, currency, onEdit }: BillsCa
 }
 
 export function Budzet() {
-  const { currency } = useAuth()
+  const { currency, carryOverAffectsBudget } = useAuth()
   const {
-    settings, fixedCosts, monthlyIncome, transactionIncome, totalFixedCosts, remainingBudget,
+    settings, fixedCosts, monthlyIncome, transactionIncome, openingBalance,
+    totalFixedCosts, billsCosts, reservedByCategory, remainingBudget,
     loading, error, saveSettings, addFixedCost, updateFixedCost, deleteFixedCost,
   } = useBudzet()
 
@@ -263,6 +286,11 @@ export function Budzet() {
                     ) : (
                       <p className="text-[10px] text-slate-500 mt-0.5">Iz transakcija ovog meseca</p>
                     )}
+                    {carryOverAffectsBudget && openingBalance !== 0 && (
+                      <p className="text-[10px] text-orange-400/80 mt-0.5">
+                        Uključuje preneseno: {openingBalance >= 0 ? '+' : ''}{formatAmount(openingBalance, currency)}
+                      </p>
+                    )}
                   </div>
                   <button
                     onClick={() => { setIncomeInput(settings.income_override !== null ? String(settings.income_override) : ''); setEditingIncome(true) }}
@@ -314,7 +342,7 @@ export function Budzet() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <BillsCard
-              totalFixedCosts={totalFixedCosts}
+              billsCosts={billsCosts}
               monthlyIncome={monthlyIncome}
               currency={currency}
               onEdit={() => setShowCostsModal(true)}
@@ -327,6 +355,7 @@ export function Budzet() {
                 pct={sliders[cat.key]}
                 recommended={cat.recommended}
                 remainingBudget={remainingBudget}
+                reserved={reservedByCategory[cat.costKey]}
                 currency={currency}
                 onChange={v => handleSliderChange(cat.key, v)}
                 onSave={handleSliderSave}

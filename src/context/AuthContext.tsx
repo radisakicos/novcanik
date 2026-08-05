@@ -14,6 +14,12 @@ interface AuthContextType {
   setCurrency: (c: string) => void
   fullName: string | null
   setFullName: (name: string) => void
+  carryOverEnabled: boolean
+  setCarryOverEnabled: (v: boolean) => void
+  carryOverAffectsBudget: boolean
+  setCarryOverAffectsBudget: (v: boolean) => void
+  carryOverStartDate: string | null
+  setCarryOverStartDate: (d: string | null) => void
   signOut: () => Promise<void>
 }
 
@@ -26,17 +32,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null)
   const [currency, setCurrency] = useState('RSD')
   const [fullName, setFullName] = useState<string | null>(null)
+  const [carryOverEnabled, setCarryOverEnabled] = useState(false)
+  const [carryOverAffectsBudget, setCarryOverAffectsBudget] = useState(false)
+  const [carryOverStartDate, setCarryOverStartDate] = useState<string | null>(null)
 
   const fetchSettings = useCallback(async (userId: string): Promise<void> => {
     try {
       const { data } = await supabase
         .from('settings')
-        .select('onboarding_completed, currency, full_name')
+        .select('onboarding_completed, currency, full_name, carry_over_enabled, carry_over_affects_budget, carry_over_start_date')
         .eq('id', userId)
         .single()
       setOnboardingCompleted(data?.onboarding_completed ?? false)
       setCurrency(data?.currency ?? 'RSD')
       setFullName(data?.full_name ?? null)
+      setCarryOverEnabled(data?.carry_over_enabled ?? false)
+      setCarryOverAffectsBudget(data?.carry_over_affects_budget ?? false)
+      setCarryOverStartDate(data?.carry_over_start_date ?? null)
     } catch {
       setOnboardingCompleted(true)
       setCurrency('RSD')
@@ -72,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setOnboardingCompleted(null)
         setCurrency('RSD')
+        setCarryOverEnabled(false)
+        setCarryOverAffectsBudget(false)
+        setCarryOverStartDate(null)
       }
     })
 
@@ -102,6 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setCurrency,
       fullName,
       setFullName,
+      carryOverEnabled,
+      setCarryOverEnabled,
+      carryOverAffectsBudget,
+      setCarryOverAffectsBudget,
+      carryOverStartDate,
+      setCarryOverStartDate,
       signOut,
     }}>
       {children}

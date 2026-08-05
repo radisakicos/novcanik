@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Plus, Pencil, Trash2, X, GripVertical, Check, ChevronDown, ChevronUp, Lock, Mail, Coins, TrendingDown, TrendingUp, Smartphone, Share, Code2, Github, Zap, CircleDollarSign, Eye, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, GripVertical, Check, ChevronDown, ChevronUp, Lock, Mail, Coins, TrendingDown, TrendingUp, Smartphone, Share, Code2, Github, Zap, CircleDollarSign, Eye, EyeOff, ArrowRightLeft } from 'lucide-react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors, type DragEndEvent,
@@ -15,6 +15,7 @@ import { useCategories } from '../hooks/useCategories'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 import { ColorPicker, PRESET_COLORS } from '../components/ColorPicker'
 import { IconPicker, renderCategoryIcon } from '../components/IconPicker'
+import { Switch } from '../components/Switch'
 import type { Category } from '../types'
 
 const CURRENCIES = [
@@ -251,12 +252,18 @@ function SortableCategoryRow({ category, onEdit, onDelete }: { category: Categor
 // ---- Main page ----
 
 export function Podesavanja() {
-  const { user, currency, setCurrency, fullName, setFullName } = useAuth()
+  const {
+    user, currency, setCurrency, fullName, setFullName,
+    carryOverEnabled, setCarryOverEnabled,
+    carryOverAffectsBudget, setCarryOverAffectsBudget,
+    carryOverStartDate, setCarryOverStartDate,
+  } = useAuth()
   const { categories, loading, error: categoriesError, refetch } = useCategories()
   const { canInstall, isIOS, isInstalled, install } = usePWAInstall()
 
   const [addModalType, setAddModalType] = useState<'income' | 'expense' | null>(null)
   const [savingCurrency, setSavingCurrency] = useState(false)
+  const [savingCarryOver, setSavingCarryOver] = useState(false)
   const [currencyOpen, setCurrencyOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
@@ -295,6 +302,27 @@ export function Podesavanja() {
     setCurrency(value)
     await supabase.from('settings').update({ currency: value }).eq('id', user!.id)
     setSavingCurrency(false)
+  }
+
+  const handleCarryOverToggle = async (enabled: boolean): Promise<void> => {
+    setSavingCarryOver(true)
+    const startDate = enabled ? new Date().toISOString().split('T')[0] : carryOverStartDate
+    setCarryOverEnabled(enabled)
+    setCarryOverStartDate(startDate)
+    if (!enabled) setCarryOverAffectsBudget(false)
+    await supabase.from('settings').update({
+      carry_over_enabled: enabled,
+      carry_over_start_date: startDate,
+      ...(enabled ? {} : { carry_over_affects_budget: false }),
+    }).eq('id', user!.id)
+    setSavingCarryOver(false)
+  }
+
+  const handleCarryOverBudgetToggle = async (enabled: boolean): Promise<void> => {
+    setSavingCarryOver(true)
+    setCarryOverAffectsBudget(enabled)
+    await supabase.from('settings').update({ carry_over_affects_budget: enabled }).eq('id', user!.id)
+    setSavingCarryOver(false)
   }
 
   const sensors = useSensors(
@@ -438,6 +466,42 @@ export function Podesavanja() {
           </div>
         </section>
       </div>
+
+      {/* PRENOS SALDA */}
+      <section>
+        <p className={sectionLabel}>Prenos salda</p>
+        <div className={`${card} p-6`}>
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-400 shrink-0">
+                <ArrowRightLeft size={18} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Prenesi ostatak u sledeći mesec</p>
+                <p className="text-xs text-slate-400 leading-relaxed mt-1 max-w-md">
+                  Kad je uključeno, ono što ti ostane (ili si u minusu) na kraju meseca automatski
+                  se dodaje na balans sledećeg meseca. Računa se od dana kad ovo uključiš — stariji
+                  meseci se ne diraju.
+                </p>
+              </div>
+            </div>
+            <Switch checked={carryOverEnabled} disabled={savingCarryOver}
+              onChange={v => void handleCarryOverToggle(v)} label="Prenesi ostatak u sledeći mesec" />
+          </div>
+
+          <div className={`flex items-start justify-between gap-4 pt-5 border-t border-white/5 transition-opacity ${carryOverEnabled ? 'opacity-100' : 'opacity-40'}`}>
+            <div>
+              <p className="text-sm font-bold text-white">Primeni i na Budžet</p>
+              <p className="text-xs text-slate-400 leading-relaxed mt-1 max-w-md">
+                Preneseni ostatak/minus utiče i na raspoloživi budžet za slidere (trošenje,
+                investiranje, davanje) na stranici Budžet.
+              </p>
+            </div>
+            <Switch checked={carryOverAffectsBudget} disabled={!carryOverEnabled || savingCarryOver}
+              onChange={v => void handleCarryOverBudgetToggle(v)} label="Primeni prenos i na Budžet" />
+          </div>
+        </div>
+      </section>
 
       {/* UPRAVLJANJE KATEGORIJAMA */}
       <section>

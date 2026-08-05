@@ -33,4 +33,7 @@ export interface Settings {
   theme: 'light' | 'dark'
   currency: string
   onboarding_completed: boolean
+  carry_over_enabled: boolean
+  carry_over_affects_budget: boolean
+  carry_over_start_date: string | null
 }

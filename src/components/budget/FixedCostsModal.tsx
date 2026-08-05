@@ -1,14 +1,15 @@
-import { useState, type FormEvent } from 'react'
-import { X, Trash2, Plus, Pencil, Check } from 'lucide-react'
+import { useState, useRef, useEffect, type FormEvent } from 'react'
+import { X, Trash2, Plus, Pencil, Check, ChevronDown } from 'lucide-react'
 
 import type { FixedCost } from '../../hooks/useBudzet'
 import { formatAmount } from '../../lib/formatAmount'
+import { FIXED_COST_CATEGORIES, CATEGORY_META, type FixedCostCategory } from '../../lib/budgetCategories'
 
 interface Props {
   fixedCosts: FixedCost[]
   currency: string
-  onAdd: (name: string, amount: number, notes: string | null) => Promise<string | null>
-  onUpdate: (id: string, name: string, amount: number, notes: string | null) => Promise<string | null>
+  onAdd: (name: string, amount: number, notes: string | null, category: FixedCostCategory) => Promise<string | null>
+  onUpdate: (id: string, name: string, amount: number, notes: string | null, category: FixedCostCategory) => Promise<string | null>
   onDelete: (id: string) => Promise<string | null>
   onClose: () => void
 }
@@ -17,16 +18,66 @@ interface EditState {
   name: string
   amount: string
   notes: string
+  category: FixedCostCategory
+}
+
+function CategoryPicker({ value, onChange }: { value: FixedCostCategory; onChange: (c: FixedCostCategory) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const meta = CATEGORY_META[value]
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[#e1e2e7] hover:border-orange-500/40 transition-colors"
+      >
+        <span className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: meta.color }} />
+          {meta.label}
+        </span>
+        <ChevronDown size={14} className={`text-slate-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[#191c1f] border border-white/10 rounded-lg overflow-hidden z-30 shadow-xl">
+          {FIXED_COST_CATEGORIES.map(cat => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => { onChange(cat); setOpen(false) }}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors hover:bg-white/5 ${
+                cat === value ? 'text-orange-400' : 'text-slate-300'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_META[cat].color }} />
+              {CATEGORY_META[cat].label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function FixedCostsModal({ fixedCosts, currency, onAdd, onUpdate, onDelete, onClose }: Props) {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [notes, setNotes] = useState('')
+  const [category, setCategory] = useState<FixedCostCategory>('bills')
   const [adding, setAdding] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editState, setEditState] = useState<EditState>({ name: '', amount: '', notes: '' })
+  const [editState, setEditState] = useState<EditState>({ name: '', amount: '', notes: '', category: 'bills' })
   const [savingId, setSavingId] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -38,24 +89,25 @@ export function FixedCostsModal({ fixedCosts, currency, onAdd, onUpdate, onDelet
     if (!name.trim()) { setError('Unesite ime računa.'); return }
     if (isNaN(parsed) || parsed <= 0) { setError('Iznos mora biti veći od 0.'); return }
     setAdding(true)
-    const err = await onAdd(name.trim(), parsed, notes.trim() || null)
+    const err = await onAdd(name.trim(), parsed, notes.trim() || null, category)
     if (err) { setError(err); setAdding(false); return }
     setName('')
     setAmount('')
     setNotes('')
+    setCategory('bills')
     setAdding(false)
   }
 
   const startEdit = (c: FixedCost): void => {
     setEditingId(c.id)
-    setEditState({ name: c.name, amount: String(c.amount), notes: c.notes ?? '' })
+    setEditState({ name: c.name, amount: String(c.amount), notes: c.notes ?? '', category: c.category })
   }
 
   const handleUpdate = async (id: string): Promise<void> => {
     const parsed = parseFloat(editState.amount.replace(',', '.'))
     if (!editState.name.trim() || isNaN(parsed) || parsed <= 0) return
     setSavingId(id)
-    const err = await onUpdate(id, editState.name.trim(), parsed, editState.notes.trim() || null)
+    const err = await onUpdate(id, editState.name.trim(), parsed, editState.notes.trim() || null, editState.category)
     setSavingId(null)
     if (err) { setError(err); return }
     setEditingId(null)
@@ -111,6 +163,10 @@ export function FixedCostsModal({ fixedCosts, currency, onAdd, onUpdate, onDelet
                       placeholder="Beleška (opciono)"
                       className={inputCls}
                     />
+                    <CategoryPicker
+                      value={editState.category}
+                      onChange={c => setEditState(s => ({ ...s, category: c }))}
+                    />
                     <div className="flex gap-2 pt-1">
                       <button
                         onClick={() => setEditingId(null)}
@@ -131,7 +187,15 @@ export function FixedCostsModal({ fixedCosts, currency, onAdd, onUpdate, onDelet
                 ) : (
                   <div className="group flex items-start justify-between px-4 py-3 rounded-xl bg-white/5 hover:bg-white/[0.07] transition-colors">
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[#e1e2e7]">{c.name}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-[#e1e2e7]">{c.name}</p>
+                        <span
+                          className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0"
+                          style={{ backgroundColor: CATEGORY_META[c.category].color + '22', color: CATEGORY_META[c.category].color }}
+                        >
+                          {CATEGORY_META[c.category].label}
+                        </span>
+                      </div>
                       <p className="text-xs text-[#a38d7b]">{formatAmount(c.amount, currency)}</p>
                       {c.notes && (
                         <p className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[220px]" title={c.notes}>
@@ -192,6 +256,7 @@ export function FixedCostsModal({ fixedCosts, currency, onAdd, onUpdate, onDelet
             onChange={e => setNotes(e.target.value)}
             className={inputCls}
           />
+          <CategoryPicker value={category} onChange={setCategory} />
 
           {error && <p className="text-sm text-red-400">{error}</p>}
 

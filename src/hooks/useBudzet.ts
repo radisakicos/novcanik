@@ -2,12 +2,21 @@ import { useState, useEffect, useCallback } from 'react'
 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { getOpeningBalance } from '../lib/openingBalance'
+import type { FixedCostCategory } from '../lib/budgetCategories'
 
 export interface FixedCost {
   id: string
   name: string
   amount: number
   notes: string | null
+  category: FixedCostCategory
+}
+
+export interface ReservedByCategory {
+  spending: number
+  investing: number
+  giving: number
 }
 
 export interface BudgetSettings {
@@ -27,10 +36,11 @@ const DEFAULT_SETTINGS: BudgetSettings = {
 }
 
 export function useBudzet() {
-  const { user } = useAuth()
+  const { user, carryOverEnabled, carryOverAffectsBudget, carryOverStartDate } = useAuth()
   const [settings, setSettings] = useState<BudgetSettings>(DEFAULT_SETTINGS)
   const [fixedCosts, setFixedCosts] = useState<FixedCost[]>([])
   const [transactionIncome, setTransactionIncome] = useState(0)
+  const [openingBalance, setOpeningBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,10 +56,13 @@ export function useBudzet() {
     const lastDay = new Date(year, month, 0).getDate()
     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
 
-    const [settingsRes, costsRes, incomeRes] = await Promise.all([
+    const [settingsRes, costsRes, incomeRes, opening] = await Promise.all([
       supabase.from('budget_settings').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('fixed_costs').select('id, name, amount, notes').eq('user_id', user.id).order('created_at'),
+      supabase.from('fixed_costs').select('id, name, amount, notes, category').eq('user_id', user.id).order('created_at'),
       supabase.from('transactions').select('amount').eq('type', 'income').gte('date', startDate).lte('date', endDate),
+      carryOverEnabled && carryOverAffectsBudget && carryOverStartDate
+        ? getOpeningBalance(user.id, carryOverStartDate, startDate)
+        : Promise.resolve(0),
     ])
 
     if (settingsRes.error || costsRes.error || incomeRes.error) {
@@ -61,8 +74,9 @@ export function useBudzet() {
     setSettings((settingsRes.data as BudgetSettings | null) ?? DEFAULT_SETTINGS)
     setFixedCosts((costsRes.data ?? []) as FixedCost[])
     setTransactionIncome((incomeRes.data ?? []).reduce((s, r) => s + r.amount, 0))
+    setOpeningBalance(opening)
     setLoading(false)
-  }, [user])
+  }, [user, carryOverEnabled, carryOverAffectsBudget, carryOverStartDate])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
@@ -74,25 +88,29 @@ export function useBudzet() {
     return e ? 'Greška pri čuvanju budžeta.' : null
   }
 
-  const addFixedCost = async (name: string, amount: number, notes: string | null): Promise<string | null> => {
+  const addFixedCost = async (
+    name: string, amount: number, notes: string | null, category: FixedCostCategory,
+  ): Promise<string | null> => {
     if (!user) return null
     const { data, error: e } = await supabase
       .from('fixed_costs')
-      .insert({ user_id: user.id, name, amount, notes })
-      .select('id, name, amount, notes')
+      .insert({ user_id: user.id, name, amount, notes, category })
+      .select('id, name, amount, notes, category')
       .single()
     if (e) return 'Greška pri dodavanju troška.'
     if (data) setFixedCosts(prev => [...prev, data as FixedCost])
     return null
   }
 
-  const updateFixedCost = async (id: string, name: string, amount: number, notes: string | null): Promise<string | null> => {
+  const updateFixedCost = async (
+    id: string, name: string, amount: number, notes: string | null, category: FixedCostCategory,
+  ): Promise<string | null> => {
     const { error: e } = await supabase
       .from('fixed_costs')
-      .update({ name, amount, notes })
+      .update({ name, amount, notes, category })
       .eq('id', id)
     if (e) return 'Greška pri izmjeni troška.'
-    setFixedCosts(prev => prev.map(c => c.id === id ? { ...c, name, amount, notes } : c))
+    setFixedCosts(prev => prev.map(c => c.id === id ? { ...c, name, amount, notes, category } : c))
     return null
   }
 
@@ -103,16 +121,26 @@ export function useBudzet() {
     return null
   }
 
-  const monthlyIncome = settings.income_override ?? transactionIncome
+  const baseIncome = settings.income_override ?? transactionIncome
+  const monthlyIncome = baseIncome + openingBalance
   const totalFixedCosts = fixedCosts.reduce((s, c) => s + c.amount, 0)
-  const remainingBudget = Math.max(0, monthlyIncome - totalFixedCosts)
+  const billsCosts = fixedCosts.filter(c => c.category === 'bills').reduce((s, c) => s + c.amount, 0)
+  const reservedByCategory: ReservedByCategory = {
+    spending: fixedCosts.filter(c => c.category === 'spending').reduce((s, c) => s + c.amount, 0),
+    investing: fixedCosts.filter(c => c.category === 'investing').reduce((s, c) => s + c.amount, 0),
+    giving: fixedCosts.filter(c => c.category === 'giving').reduce((s, c) => s + c.amount, 0),
+  }
+  const remainingBudget = Math.max(0, monthlyIncome - billsCosts)
 
   return {
     settings,
     fixedCosts,
     monthlyIncome,
     transactionIncome,
+    openingBalance,
     totalFixedCosts,
+    billsCosts,
+    reservedByCategory,
     remainingBudget,
     loading,
     error,

@@ -66,11 +66,16 @@ CREATE POLICY "transactions: korisnik briše svoje"
 -- Note: id = auth.users.id (1-to-1 relationship)
 -- ------------------------------------------------------------
 CREATE TABLE public.settings (
-  id                   uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  theme                text NOT NULL DEFAULT 'light',
-  currency             text NOT NULL DEFAULT 'RSD',
-  onboarding_completed boolean NOT NULL DEFAULT false,
-  full_name            text
+  id                         uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  theme                      text NOT NULL DEFAULT 'light',
+  currency                   text NOT NULL DEFAULT 'RSD',
+  onboarding_completed       boolean NOT NULL DEFAULT false,
+  full_name                  text,
+  -- Prenos salda: kad je uključen, Dashboard balans i (opciono) Budžet
+  -- uračunavaju kumulativni saldo od carry_over_start_date nadalje.
+  carry_over_enabled         boolean NOT NULL DEFAULT false,
+  carry_over_affects_budget  boolean NOT NULL DEFAULT false,
+  carry_over_start_date      date
 );
 
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
@@ -110,6 +115,10 @@ CREATE TABLE public.fixed_costs (
   name       text NOT NULL,
   amount     numeric(12,2) NOT NULL,
   notes      text,
+  -- Koja budžetska kofa nosi ovaj trošak. 'bills' (default) se oduzima iz
+  -- zajedničkog preostalog budžeta; ostale kategorije se prikazuju kao već
+  -- rezervisan iznos unutar svog slajdera (npr. kreditna rata pod 'investing').
+  category   text NOT NULL DEFAULT 'bills' CHECK (category IN ('bills', 'spending', 'investing', 'giving')),
   created_at timestamptz NOT NULL DEFAULT now()
 );
 

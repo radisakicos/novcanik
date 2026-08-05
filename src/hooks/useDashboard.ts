@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { getOpeningBalance } from '../lib/openingBalance'
 
 const PRESET_COLORS = [
   '#3b82f6', '#ef4444', '#f59e0b', '#10b981',
@@ -29,6 +30,7 @@ export interface RecentTransaction {
 export interface DashboardData {
   totalIncome: number
   totalExpense: number
+  openingBalance: number
   balance: number
   expenseByCategory: CategorySummary[]
   recentTransactions: RecentTransaction[]
@@ -47,12 +49,13 @@ interface RawTransaction {
 }
 
 export function useDashboard(year: number, month: number, refreshKey = 0): DashboardData {
-  const { user } = useAuth()
+  const { user, carryOverEnabled, carryOverStartDate } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [result, setResult] = useState<Omit<DashboardData, 'loading' | 'error'>>({
     totalIncome: 0,
     totalExpense: 0,
+    openingBalance: 0,
     balance: 0,
     expenseByCategory: [],
     recentTransactions: [],
@@ -68,6 +71,10 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
       const startDate = `${year}-${String(month).padStart(2, '0')}-01`
       const lastDay = new Date(year, month, 0).getDate()
       const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
+
+      const openingBalance = carryOverEnabled && carryOverStartDate
+        ? await getOpeningBalance(user.id, carryOverStartDate, startDate)
+        : 0
 
       const { data: rows, error: fetchError } = await supabase
         .from('transactions')
@@ -123,7 +130,8 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
       setResult({
         totalIncome,
         totalExpense,
-        balance: totalIncome - totalExpense,
+        openingBalance,
+        balance: openingBalance + totalIncome - totalExpense,
         expenseByCategory,
         recentTransactions,
       })
@@ -131,7 +139,7 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
     }
 
     fetchData()
-  }, [user, year, month, refreshKey])
+  }, [user, year, month, refreshKey, carryOverEnabled, carryOverStartDate])
 
   return { ...result, loading, error }
 }

@@ -161,6 +161,8 @@ export function Izvestaji() {
   const { monthly, incomeByCategory, expenseByCategory, totalIncome, totalExpense, loading, error } = useIzvestaji(year)
   const filtered = useKategorijskiIzvestaj(activeFrom, activeTo)
 
+  const monthlyWithSurplus = monthly.map(m => ({ ...m, surplus: Math.max(0, m.income - m.expense) }))
+
   const isFiltered = !!activeFrom && !!activeTo
   const displayIncome = isFiltered ? filtered.incomeByCategory : incomeByCategory
   const displayExpense = isFiltered ? filtered.expenseByCategory : expenseByCategory
@@ -198,10 +200,14 @@ export function Izvestaji() {
                   <span className="w-2 h-2 rounded-full bg-red-500" />
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rashodi</span>
                 </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-green-500" />
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Višak</span>
+                </div>
               </div>
             </div>
             <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={monthly} barGap={3} barCategoryGap="32%">
+              <BarChart data={monthlyWithSurplus} barGap={3} barCategoryGap="32%">
                 <XAxis
                   dataKey="month"
                   axisLine={false}
@@ -219,11 +225,12 @@ export function Izvestaji() {
                   }}
                   formatter={(value: number, name: string) => [
                     formatAmount(value, currency),
-                    name === 'income' ? 'Prihodi' : 'Rashodi',
+                    name === 'income' ? 'Prihodi' : name === 'expense' ? 'Rashodi' : 'Višak',
                   ]}
                 />
                 <Bar dataKey="income" fill="#f7931a" radius={[3, 3, 0, 0]} maxBarSize={12} />
-                <Bar dataKey="expense" fill="#ef4444" radius={[3, 3, 0, 0]} maxBarSize={12} />
+                <Bar dataKey="expense" stackId="rashod" fill="#ef4444" radius={[0, 0, 0, 0]} maxBarSize={12} />
+                <Bar dataKey="surplus" stackId="rashod" fill="#22c55e" radius={[3, 3, 0, 0]} maxBarSize={12} />
               </BarChart>
             </ResponsiveContainer>
           </section>
