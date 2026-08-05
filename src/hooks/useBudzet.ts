@@ -44,7 +44,7 @@ export function useBudzet() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchAll = useCallback(async (): Promise<void> => {
+  const fetchAll = useCallback(async (isCancelled: () => boolean = () => false): Promise<void> => {
     if (!user) return
     setLoading(true)
     setError(null)
@@ -65,6 +65,8 @@ export function useBudzet() {
         : Promise.resolve(0),
     ])
 
+    if (isCancelled()) return
+
     if (settingsRes.error || costsRes.error || incomeRes.error) {
       setError('Greška pri učitavanju budžeta.')
       setLoading(false)
@@ -78,7 +80,11 @@ export function useBudzet() {
     setLoading(false)
   }, [user, carryOverEnabled, carryOverAffectsBudget, carryOverStartDate])
 
-  useEffect(() => { fetchAll() }, [fetchAll])
+  useEffect(() => {
+    let cancelled = false
+    fetchAll(() => cancelled)
+    return () => { cancelled = true }
+  }, [fetchAll])
 
   const saveSettings = async (patch: Partial<BudgetSettings>): Promise<string | null> => {
     if (!user) return null

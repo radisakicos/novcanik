@@ -63,6 +63,7 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
 
   useEffect(() => {
     if (!user) return
+    let cancelled = false
 
     const fetchData = async (): Promise<void> => {
       setLoading(true)
@@ -85,6 +86,7 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
         .order('created_at', { ascending: false })
 
       if (fetchError) {
+        if (cancelled) return
         setError('Greška pri učitavanju podataka.')
         setLoading(false)
         return
@@ -127,6 +129,7 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
         category_icon: t.categories?.icon ?? null,
       }))
 
+      if (cancelled) return
       setResult({
         totalIncome,
         totalExpense,
@@ -139,6 +142,7 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
     }
 
     fetchData()
+    return () => { cancelled = true }
   }, [user, year, month, refreshKey, carryOverEnabled, carryOverStartDate])
 
   return { ...result, loading, error }
