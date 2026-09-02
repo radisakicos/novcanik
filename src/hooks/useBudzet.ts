@@ -44,6 +44,17 @@ export function useBudzet() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  // Clears whatever was loaded before: a stale budget rendered under an error
+  // banner is the same silent-wrong-number problem the error was raised for.
+  const failLoad = useCallback((): void => {
+    setSettings(DEFAULT_SETTINGS)
+    setFixedCosts([])
+    setTransactionIncome(0)
+    setOpeningBalance(0)
+    setError('Greška pri učitavanju budžeta.')
+    setLoading(false)
+  }, [])
+
   const fetchAll = useCallback(async (isCancelled: () => boolean = () => false): Promise<void> => {
     if (!user) return
     setLoading(true)
@@ -69,8 +80,7 @@ export function useBudzet() {
       if (isCancelled()) return
 
       if (settingsRes.error || costsRes.error || incomeRes.error) {
-        setError('Greška pri učitavanju budžeta.')
-        setLoading(false)
+        failLoad()
         return
       }
 
@@ -82,10 +92,9 @@ export function useBudzet() {
     } catch {
       // getOpeningBalance throws instead of silently returning 0 — surface it.
       if (isCancelled()) return
-      setError('Greška pri učitavanju budžeta.')
-      setLoading(false)
+      failLoad()
     }
-  }, [user, carryOverEnabled, carryOverAffectsBudget, carryOverStartDate])
+  }, [user, carryOverEnabled, carryOverAffectsBudget, carryOverStartDate, failLoad])
 
   useEffect(() => {
     let cancelled = false

@@ -241,7 +241,7 @@ export function Budzet() {
         <div className="flex items-center justify-center h-48">
           <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
         </div>
-      ) : (
+      ) : error ? null : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             <div className="bg-[#111418] rounded-xl p-5 border border-white/5">

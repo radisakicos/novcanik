@@ -37,6 +37,10 @@ export function Dashboard() {
   const { totalIncome, totalExpense, openingBalance, balance, recentTransactions, loading, error } =
     useDashboard(year, month, refreshKey)
 
+  // Figures are shown only on a complete, successful load — a failed fetch must
+  // not leave the previous month's numbers standing under the new heading.
+  const hasData = !loading && !error
+
   const monthDelta = totalIncome - totalExpense
 
   const prevMonth = (): void => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))
@@ -80,14 +84,14 @@ export function Dashboard() {
 
           <div className="flex items-baseline justify-center gap-3 mb-3">
             <h1 className="font-display text-white text-6xl md:text-7xl font-bold" style={{ letterSpacing: '-0.02em' }}>
-              {loading ? '—' : Math.round(balance).toLocaleString('de-DE')}
+              {!hasData ? '—' : Math.round(balance).toLocaleString('de-DE')}
             </h1>
             <span className="font-display text-orange-500/60 text-2xl font-semibold">
               {currency}
             </span>
           </div>
 
-          {!loading && carryOverEnabled && (
+          {hasData && carryOverEnabled && (
             <p className="text-xs text-slate-500 mb-8">
               Preneseno: <span className={openingBalance >= 0 ? 'text-green-400' : 'text-red-400'}>
                 {openingBalance >= 0 ? '+' : ''}{formatAmount(openingBalance, currency)}
@@ -97,7 +101,7 @@ export function Dashboard() {
               </span>
             </p>
           )}
-          {(loading || !carryOverEnabled) && <div className="mb-8" />}
+          {(!hasData || !carryOverEnabled) && <div className="mb-8" />}
 
           <button onClick={() => setShowModal(true)}
             className="bg-orange-500 hover:bg-orange-600 text-[#2d1600] font-bold px-6 py-2.5 rounded-xl text-sm transition-all active:scale-95 flex items-center gap-2">
@@ -118,11 +122,11 @@ export function Dashboard() {
           </div>
           <p className="text-slate-400 text-sm font-medium mb-1">Ukupni prihodi</p>
           <p className="font-display text-[#e1e2e7] text-2xl font-semibold">
-            {loading ? '—' : formatAmount(totalIncome, currency)}
+            {!hasData ? '—' : formatAmount(totalIncome, currency)}
           </p>
           <div className="mt-4 h-1 w-full bg-slate-800/50 rounded-full overflow-hidden">
             <div className="h-full bg-green-500 rounded-full transition-all duration-700"
-              style={{ width: `${loading ? 0 : incomeProgress}%`, boxShadow: '0 0 8px rgba(34,197,94,0.4)' }} />
+              style={{ width: `${!hasData ? 0 : incomeProgress}%`, boxShadow: '0 0 8px rgba(34,197,94,0.4)' }} />
           </div>
         </div>
 
@@ -135,11 +139,11 @@ export function Dashboard() {
           </div>
           <p className="text-slate-400 text-sm font-medium mb-1">Ukupni rashodi</p>
           <p className="font-display text-[#e1e2e7] text-2xl font-semibold">
-            {loading ? '—' : formatAmount(totalExpense, currency)}
+            {!hasData ? '—' : formatAmount(totalExpense, currency)}
           </p>
           <div className="mt-4 h-1 w-full bg-slate-800/50 rounded-full overflow-hidden">
             <div className="h-full bg-red-500 rounded-full transition-all duration-700"
-              style={{ width: `${loading ? 0 : expenseProgress}%`, boxShadow: '0 0 8px rgba(239,68,68,0.4)' }} />
+              style={{ width: `${!hasData ? 0 : expenseProgress}%`, boxShadow: '0 0 8px rgba(239,68,68,0.4)' }} />
           </div>
         </div>
       </section>
@@ -153,6 +157,8 @@ export function Dashboard() {
 
         {loading ? (
           <div className="py-12 text-center text-sm text-slate-500">Učitavanje...</div>
+        ) : error ? (
+          <div className="py-12 text-center text-sm text-slate-500">Podaci nisu učitani.</div>
         ) : recentTransactions.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 px-6">
             <div className="w-20 h-20 bg-slate-800/50 rounded-full flex items-center justify-center mb-6 border border-white/5">

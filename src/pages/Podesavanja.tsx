@@ -266,6 +266,7 @@ export function Podesavanja() {
   const [addModalType, setAddModalType] = useState<'income' | 'expense' | null>(null)
   const [savingCurrency, setSavingCurrency] = useState(false)
   const [savingCarryOver, setSavingCarryOver] = useState(false)
+  const [carryOverError, setCarryOverError] = useState<string | null>(null)
   const [currencyOpen, setCurrencyOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [deletingCategory, setDeletingCategory] = useState<Category | null>(null)
@@ -308,6 +309,7 @@ export function Podesavanja() {
 
   const handleCarryOverToggle = async (enabled: boolean): Promise<void> => {
     setSavingCarryOver(true)
+    setCarryOverError(null)
     const now = new Date()
     // Local parts, not toISOString(): UTC would roll an activation made just after
     // midnight on the 1st back into the previous month. The day is fixed to 01 —
@@ -315,21 +317,44 @@ export function Podesavanja() {
     const startDate = enabled
       ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
       : carryOverStartDate
+    const previous = { enabled: carryOverEnabled, startDate: carryOverStartDate, affectsBudget: carryOverAffectsBudget }
+
     setCarryOverEnabled(enabled)
     setCarryOverStartDate(startDate)
     if (!enabled) setCarryOverAffectsBudget(false)
-    await supabase.from('settings').update({
+
+    const { error: saveError } = await supabase.from('settings').update({
       carry_over_enabled: enabled,
       carry_over_start_date: startDate,
       ...(enabled ? {} : { carry_over_affects_budget: false }),
     }).eq('id', user!.id)
+
+    // Roll the optimistic update back: leaving it in place shows the switch as
+    // saved while the next page load silently reverts it.
+    if (saveError) {
+      setCarryOverEnabled(previous.enabled)
+      setCarryOverStartDate(previous.startDate)
+      setCarryOverAffectsBudget(previous.affectsBudget)
+      setCarryOverError('Greška pri čuvanju podešavanja.')
+    }
     setSavingCarryOver(false)
   }
 
   const handleCarryOverBudgetToggle = async (enabled: boolean): Promise<void> => {
     setSavingCarryOver(true)
+    setCarryOverError(null)
+    const previous = carryOverAffectsBudget
     setCarryOverAffectsBudget(enabled)
-    await supabase.from('settings').update({ carry_over_affects_budget: enabled }).eq('id', user!.id)
+
+    const { error: saveError } = await supabase
+      .from('settings')
+      .update({ carry_over_affects_budget: enabled })
+      .eq('id', user!.id)
+
+    if (saveError) {
+      setCarryOverAffectsBudget(previous)
+      setCarryOverError('Greška pri čuvanju podešavanja.')
+    }
     setSavingCarryOver(false)
   }
 
@@ -508,6 +533,10 @@ export function Podesavanja() {
             <Switch checked={carryOverAffectsBudget} disabled={!carryOverEnabled || savingCarryOver}
               onChange={v => void handleCarryOverBudgetToggle(v)} label="Primeni prenos i na Budžet" />
           </div>
+
+          {carryOverError && (
+            <p role="alert" className="text-sm text-red-400 pt-4 border-t border-white/5">{carryOverError}</p>
+          )}
         </div>
       </section>
 

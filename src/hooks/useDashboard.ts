@@ -93,6 +93,16 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
         rows = data
       } catch {
         if (cancelled) return
+        // Drop the previous month's figures: leaving them rendered under the new
+        // month's heading shows a wrong balance with only a banner above it.
+        setResult({
+          totalIncome: 0,
+          totalExpense: 0,
+          openingBalance: 0,
+          balance: 0,
+          expenseByCategory: [],
+          recentTransactions: [],
+        })
         setError('Greška pri učitavanju podataka.')
         setLoading(false)
         return
