@@ -308,7 +308,13 @@ export function Podesavanja() {
 
   const handleCarryOverToggle = async (enabled: boolean): Promise<void> => {
     setSavingCarryOver(true)
-    const startDate = enabled ? new Date().toISOString().split('T')[0] : carryOverStartDate
+    const now = new Date()
+    // Local parts, not toISOString(): UTC would roll an activation made just after
+    // midnight on the 1st back into the previous month. The day is fixed to 01 —
+    // carry-over is month-granular, see toMonthStart().
+    const startDate = enabled
+      ? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
+      : carryOverStartDate
     setCarryOverEnabled(enabled)
     setCarryOverStartDate(startDate)
     if (!enabled) setCarryOverAffectsBudget(false)
@@ -482,8 +488,8 @@ export function Podesavanja() {
                 <p className="text-sm font-bold text-white">Prenesi ostatak u sledeći mesec</p>
                 <p className="text-xs text-slate-400 leading-relaxed mt-1 max-w-md">
                   Kad je uključeno, ono što ti ostane (ili si u minusu) na kraju meseca automatski
-                  se dodaje na balans sledećeg meseca. Računa se od dana kad ovo uključiš — stariji
-                  meseci se ne diraju.
+                  se dodaje na balans sledećeg meseca. Računa se od meseca u kom ovo uključiš —
+                  raniji meseci se ne diraju.
                 </p>
               </div>
             </div>

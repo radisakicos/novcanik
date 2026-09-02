@@ -56,28 +56,35 @@ export function useBudzet() {
     const lastDay = new Date(year, month, 0).getDate()
     const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
 
-    const [settingsRes, costsRes, incomeRes, opening] = await Promise.all([
-      supabase.from('budget_settings').select('*').eq('user_id', user.id).maybeSingle(),
-      supabase.from('fixed_costs').select('id, name, amount, notes, category').eq('user_id', user.id).order('created_at'),
-      supabase.from('transactions').select('amount').eq('type', 'income').gte('date', startDate).lte('date', endDate),
-      carryOverEnabled && carryOverAffectsBudget && carryOverStartDate
-        ? getOpeningBalance(user.id, carryOverStartDate, startDate)
-        : Promise.resolve(0),
-    ])
+    try {
+      const [settingsRes, costsRes, incomeRes, opening] = await Promise.all([
+        supabase.from('budget_settings').select('*').eq('user_id', user.id).maybeSingle(),
+        supabase.from('fixed_costs').select('id, name, amount, notes, category').eq('user_id', user.id).order('created_at'),
+        supabase.from('transactions').select('amount').eq('type', 'income').gte('date', startDate).lte('date', endDate),
+        carryOverEnabled && carryOverAffectsBudget && carryOverStartDate
+          ? getOpeningBalance(user.id, carryOverStartDate, startDate)
+          : Promise.resolve(0),
+      ])
 
-    if (isCancelled()) return
+      if (isCancelled()) return
 
-    if (settingsRes.error || costsRes.error || incomeRes.error) {
+      if (settingsRes.error || costsRes.error || incomeRes.error) {
+        setError('Greška pri učitavanju budžeta.')
+        setLoading(false)
+        return
+      }
+
+      setSettings((settingsRes.data as BudgetSettings | null) ?? DEFAULT_SETTINGS)
+      setFixedCosts((costsRes.data ?? []) as FixedCost[])
+      setTransactionIncome((incomeRes.data ?? []).reduce((s, r) => s + r.amount, 0))
+      setOpeningBalance(opening)
+      setLoading(false)
+    } catch {
+      // getOpeningBalance throws instead of silently returning 0 — surface it.
+      if (isCancelled()) return
       setError('Greška pri učitavanju budžeta.')
       setLoading(false)
-      return
     }
-
-    setSettings((settingsRes.data as BudgetSettings | null) ?? DEFAULT_SETTINGS)
-    setFixedCosts((costsRes.data ?? []) as FixedCost[])
-    setTransactionIncome((incomeRes.data ?? []).reduce((s, r) => s + r.amount, 0))
-    setOpeningBalance(opening)
-    setLoading(false)
   }, [user, carryOverEnabled, carryOverAffectsBudget, carryOverStartDate])
 
   useEffect(() => {

@@ -73,19 +73,25 @@ export function useDashboard(year: number, month: number, refreshKey = 0): Dashb
       const lastDay = new Date(year, month, 0).getDate()
       const endDate = `${year}-${String(month).padStart(2, '0')}-${lastDay}`
 
-      const openingBalance = carryOverEnabled && carryOverStartDate
-        ? await getOpeningBalance(user.id, carryOverStartDate, startDate)
-        : 0
+      let openingBalance = 0
+      let rows: unknown[] | null = null
 
-      const { data: rows, error: fetchError } = await supabase
-        .from('transactions')
-        .select('id, date, amount, type, note, account_name, categories(name, color, icon)')
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false })
+      try {
+        openingBalance = carryOverEnabled && carryOverStartDate
+          ? await getOpeningBalance(user.id, carryOverStartDate, startDate)
+          : 0
 
-      if (fetchError) {
+        const { data, error: fetchError } = await supabase
+          .from('transactions')
+          .select('id, date, amount, type, note, account_name, categories(name, color, icon)')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+
+        if (fetchError) throw fetchError
+        rows = data
+      } catch {
         if (cancelled) return
         setError('Greška pri učitavanju podataka.')
         setLoading(false)
