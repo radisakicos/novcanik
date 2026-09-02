@@ -1,48 +1,4 @@
-import {
-  Wallet, Briefcase, DollarSign, PiggyBank, TrendingUp, Gift,
-  Home, Zap, ShoppingCart, Utensils, Plane, ShoppingBag,
-  Heart, Dumbbell, Car, Music, Coffee, Phone,
-  Shirt, BookOpen, Users, Wrench, Bus, Receipt,
-  type LucideIcon,
-} from 'lucide-react'
-
-interface IconEntry {
-  name: string
-  component: LucideIcon
-}
-
-export const CATEGORY_ICONS: IconEntry[] = [
-  { name: 'Wallet', component: Wallet },
-  { name: 'Briefcase', component: Briefcase },
-  { name: 'DollarSign', component: DollarSign },
-  { name: 'PiggyBank', component: PiggyBank },
-  { name: 'TrendingUp', component: TrendingUp },
-  { name: 'Gift', component: Gift },
-  { name: 'Home', component: Home },
-  { name: 'Zap', component: Zap },
-  { name: 'ShoppingCart', component: ShoppingCart },
-  { name: 'Utensils', component: Utensils },
-  { name: 'Plane', component: Plane },
-  { name: 'ShoppingBag', component: ShoppingBag },
-  { name: 'Heart', component: Heart },
-  { name: 'Dumbbell', component: Dumbbell },
-  { name: 'Car', component: Car },
-  { name: 'Music', component: Music },
-  { name: 'Coffee', component: Coffee },
-  { name: 'Phone', component: Phone },
-  { name: 'Shirt', component: Shirt },
-  { name: 'BookOpen', component: BookOpen },
-  { name: 'Users', component: Users },
-  { name: 'Wrench', component: Wrench },
-  { name: 'Bus', component: Bus },
-  { name: 'Receipt', component: Receipt },
-]
-
-export function renderCategoryIcon(name: string | null, size = 18, color?: string) {
-  const entry = CATEGORY_ICONS.find(i => i.name === name)
-  if (!entry) return null
-  return <entry.component size={size} color={color} />
-}
+import { CATEGORY_ICONS } from '../lib/category.constants'
 
 interface IconPickerProps {
   value: string

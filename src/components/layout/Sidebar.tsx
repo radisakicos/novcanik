@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { LayoutDashboard, Receipt, Wallet, BarChart2, Settings, LogOut } from 'lucide-react'
 
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Pregled', icon: LayoutDashboard, end: true },

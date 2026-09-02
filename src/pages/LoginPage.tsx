@@ -3,7 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Github } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 
 type AuthMode = 'login' | 'signup' | 'forgot'
 

@@ -1,29 +1,9 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react'
+import { useEffect, useState, useCallback, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { Session, User } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 
 import { supabase } from '../lib/supabase'
-
-interface AuthContextType {
-  session: Session | null
-  user: User | null
-  loading: boolean
-  onboardingCompleted: boolean | null
-  setOnboardingCompleted: (v: boolean) => void
-  currency: string
-  setCurrency: (c: string) => void
-  fullName: string | null
-  setFullName: (name: string) => void
-  carryOverEnabled: boolean
-  setCarryOverEnabled: (v: boolean) => void
-  carryOverAffectsBudget: boolean
-  setCarryOverAffectsBudget: (v: boolean) => void
-  carryOverStartDate: string | null
-  setCarryOverStartDate: (d: string | null) => void
-  signOut: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
+import { AuthContext } from '../hooks/useAuth'
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -128,10 +108,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth(): AuthContextType {
-  const context = useContext(AuthContext)
-  if (!context) throw new Error('useAuth must be used within AuthProvider')
-  return context
 }

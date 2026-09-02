@@ -3,9 +3,9 @@ import { X, ChevronDown, ChevronUp, Search } from 'lucide-react'
 
 import { supabase } from '../../lib/supabase'
 import { getLastUsedTransactionDate, setLastUsedTransactionDate } from '../../lib/lastUsedTransactionDate'
-import { useAuth } from '../../context/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
 import { useCategories } from '../../hooks/useCategories'
-import { renderCategoryIcon } from '../IconPicker'
+import { renderCategoryIcon } from '../../lib/renderCategoryIcon'
 import { CalendarPicker } from '../CalendarPicker'
 
 interface InitialData {

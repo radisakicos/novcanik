@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from './useAuth'
 
 export interface TransactionWithCategory {
   id: string

@@ -1,8 +1,4 @@
-export const PRESET_COLORS = [
-  '#ef4444', '#f97316', '#f59e0b', '#eab308',
-  '#22c55e', '#10b981', '#06b6d4', '#3b82f6',
-  '#8b5cf6', '#ec4899', '#64748b', '#78716c',
-]
+import { PRESET_COLORS } from '../lib/category.constants'
 
 interface ColorPickerProps {
   value: string

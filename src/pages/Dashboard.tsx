@@ -4,9 +4,9 @@ import { ChevronLeft, ChevronRight, Plus, ArrowDownLeft, ArrowUpRight, Receipt }
 
 import { useDashboard } from '../hooks/useDashboard'
 import { AddTransactionModal } from '../components/transactions/AddTransactionModal'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { formatAmount } from '../lib/formatAmount'
-import { renderCategoryIcon } from '../components/IconPicker'
+import { renderCategoryIcon } from '../lib/renderCategoryIcon'
 
 const MONTHS_SR = [
   'Januar', 'Februar', 'Mart', 'April', 'Maj', 'Jun',

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Plus, X, ChevronRight, ChevronLeft } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
-import { ColorPicker, PRESET_COLORS } from '../components/ColorPicker'
-import { IconPicker, renderCategoryIcon } from '../components/IconPicker'
+import { useAuth } from '../hooks/useAuth'
+import { ColorPicker } from '../components/ColorPicker'
+import { PRESET_COLORS } from '../lib/category.constants'
+import { IconPicker } from '../components/IconPicker'
+import { renderCategoryIcon } from '../lib/renderCategoryIcon'
 
 interface CategoryDraft {
   localId: string

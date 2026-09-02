@@ -3,7 +3,7 @@ import { Pencil, Check, X, TrendingUp, Receipt } from 'lucide-react'
 
 import { useBudzet, type BudgetSettings, type ReservedByCategory } from '../hooks/useBudzet'
 import { FixedCostsModal } from '../components/budget/FixedCostsModal'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { formatAmount } from '../lib/formatAmount'
 
 type SliderKey = 'spending_pct' | 'investing_pct' | 'giving_pct'

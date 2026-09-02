@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { Plus, Trash2, Pencil, ArrowUpRight, ArrowDownRight, TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { useTransactions, type TransactionWithCategory } from '../hooks/useTransactions'
 import { AddTransactionModal } from '../components/transactions/AddTransactionModal'
 import { formatAmount } from '../lib/formatAmount'

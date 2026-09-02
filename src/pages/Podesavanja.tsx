@@ -10,11 +10,13 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 
 import { supabase } from '../lib/supabase'
-import { useAuth } from '../context/AuthContext'
+import { useAuth } from '../hooks/useAuth'
 import { useCategories } from '../hooks/useCategories'
 import { usePWAInstall } from '../hooks/usePWAInstall'
-import { ColorPicker, PRESET_COLORS } from '../components/ColorPicker'
-import { IconPicker, renderCategoryIcon } from '../components/IconPicker'
+import { ColorPicker } from '../components/ColorPicker'
+import { PRESET_COLORS } from '../lib/category.constants'
+import { IconPicker } from '../components/IconPicker'
+import { renderCategoryIcon } from '../lib/renderCategoryIcon'
 import { Switch } from '../components/Switch'
 import type { Category } from '../types'
 
